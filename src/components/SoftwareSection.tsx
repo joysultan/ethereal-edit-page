@@ -5,9 +5,8 @@ const software = [
   { name: "Photoshop", color: "31A8FF" },
   { name: "Illustrator", color: "FF9A00" },
   { name: "Premiere Pro", color: "9999FF" },
-  { name: "After Effects", color: "9999FF" },
+  { name: "CapCut", color: "00E5FF" },
   { name: "Figma", color: "A259FF" },
-  { name: "DaVinci Resolve", color: "E34427" },
 ];
 
 const SoftwareSection = () => {
