@@ -153,8 +153,7 @@ const ToolHints = () => (
     >
       <svg width="140" height="40" viewBox="0 0 140 40">
         <path d="M0,30 C20,30 30,10 50,10 S80,30 100,15 S120,25 140,10" fill="none" stroke="hsl(var(--gradient-end))" strokeWidth="1" opacity="0.35" />
-        <diamond />
-        <polygon points="48,7 53,10 48,13 43,10" fill="hsl(var(--gradient-end))" opacity="0.5" />
+        {/* keyframe diamonds */}
         <polygon points="98,12 103,15 98,18 93,15" fill="hsl(var(--gradient-end))" opacity="0.4" />
         <polygon points="0,27 5,30 0,33 -5,30" fill="hsl(var(--gradient-end))" opacity="0.3" />
       </svg>
