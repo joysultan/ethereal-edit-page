@@ -1,51 +1,67 @@
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowDown, Play } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* ── floating shape data ── */
 const shapes = [
-  { type: "ring", size: 120, x: "12%", y: "18%", delay: 0, dur: 22, color: "var(--gradient-start)" },
-  { type: "triangle", size: 80, x: "82%", y: "14%", delay: 1.2, dur: 18, color: "var(--gradient-mid)" },
-  { type: "ring", size: 60, x: "70%", y: "72%", delay: 0.6, dur: 25, color: "var(--gradient-end)" },
-  { type: "diamond", size: 50, x: "20%", y: "75%", delay: 2, dur: 20, color: "var(--gradient-mid)" },
-  { type: "cross", size: 40, x: "90%", y: "45%", delay: 1.5, dur: 16, color: "var(--gradient-start)" },
-  { type: "ring", size: 90, x: "50%", y: "85%", delay: 0.8, dur: 24, color: "var(--gradient-end)" },
+  { type: "ring", size: 120, x: "10%", y: "15%", delay: 0, dur: 22, gradient: "start" },
+  { type: "hexagon", size: 90, x: "80%", y: "12%", delay: 1.2, dur: 18, gradient: "mid" },
+  { type: "triangle", size: 70, x: "75%", y: "68%", delay: 0.6, dur: 25, gradient: "end" },
+  { type: "hexagon", size: 55, x: "18%", y: "72%", delay: 2, dur: 20, gradient: "mid" },
+  { type: "cross", size: 40, x: "88%", y: "42%", delay: 1.5, dur: 16, gradient: "start" },
+  { type: "ring", size: 80, x: "50%", y: "82%", delay: 0.8, dur: 24, gradient: "end" },
+  { type: "diamond", size: 45, x: "35%", y: "20%", delay: 1.8, dur: 19, gradient: "mid" },
+  { type: "hexagon", size: 65, x: "60%", y: "45%", delay: 0.4, dur: 21, gradient: "start" },
 ];
 
 /* ── light streak data ── */
 const streaks = [
-  { angle: -35, top: "15%", left: "-10%", width: 500, delay: 0, dur: 8 },
-  { angle: -25, top: "55%", left: "60%", width: 400, delay: 3, dur: 10 },
-  { angle: -40, top: "35%", left: "30%", width: 350, delay: 5, dur: 7 },
+  { angle: -35, top: "12%", left: "-10%", width: 550, delay: 0, dur: 8 },
+  { angle: -25, top: "52%", left: "55%", width: 450, delay: 3, dur: 10 },
+  { angle: -40, top: "32%", left: "25%", width: 380, delay: 5, dur: 7 },
+  { angle: -30, top: "75%", left: "10%", width: 300, delay: 7, dur: 9 },
 ];
 
 /* ── shape renderers ── */
-const ShapeSVG = ({ type, size, color }: { type: string; size: number; color: string }) => {
-  const stroke = `hsl(${color})`;
+const ShapeSVG = ({ type, size, gradient }: { type: string; size: number; gradient: string }) => {
+  const color = `hsl(var(--gradient-${gradient}))`;
   switch (type) {
     case "ring":
       return (
         <svg width={size} height={size} viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.4" />
+          <circle cx="50" cy="50" r="42" fill="none" stroke={color} strokeWidth="1.2" opacity="0.35" />
+          <circle cx="50" cy="50" r="38" fill="none" stroke={color} strokeWidth="0.5" opacity="0.15" />
+        </svg>
+      );
+    case "hexagon":
+      return (
+        <svg width={size} height={size} viewBox="0 0 100 100">
+          <polygon
+            points="50,3 93,25 93,75 50,97 7,75 7,25"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.2"
+            opacity="0.3"
+          />
         </svg>
       );
     case "triangle":
       return (
         <svg width={size} height={size} viewBox="0 0 100 100">
-          <polygon points="50,8 92,88 8,88" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.35" />
+          <polygon points="50,8 92,88 8,88" fill="none" stroke={color} strokeWidth="1.2" opacity="0.3" />
         </svg>
       );
     case "diamond":
       return (
         <svg width={size} height={size} viewBox="0 0 100 100">
-          <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.35" />
+          <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke={color} strokeWidth="1.2" opacity="0.3" />
         </svg>
       );
     case "cross":
       return (
         <svg width={size} height={size} viewBox="0 0 100 100">
-          <line x1="50" y1="10" x2="50" y2="90" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
-          <line x1="10" y1="50" x2="90" y2="50" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
+          <line x1="50" y1="10" x2="50" y2="90" stroke={color} strokeWidth="1.2" opacity="0.25" />
+          <line x1="10" y1="50" x2="90" y2="50" stroke={color} strokeWidth="1.2" opacity="0.25" />
         </svg>
       );
     default:
@@ -53,14 +69,18 @@ const ShapeSVG = ({ type, size, color }: { type: string; size: number; color: st
   }
 };
 
-/* ── animated word (letter-by-letter 3D reveal) ── */
+/* ── animated letters with 3D reveal ── */
 const letterVariants = {
   hidden: { opacity: 0, y: 60, rotateX: 90 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
     rotateX: 0,
-    transition: { duration: 0.7, delay: 0.6 + i * 0.05, ease: [0.215, 0.61, 0.355, 1] as [number, number, number, number] },
+    transition: {
+      duration: 0.7,
+      delay: 0.6 + i * 0.045,
+      ease: [0.215, 0.61, 0.355, 1] as [number, number, number, number],
+    },
   }),
 };
 
@@ -81,13 +101,32 @@ const AnimatedLine = ({
         variants={letterVariants}
         initial="hidden"
         animate="visible"
-        className="inline-block transition-all duration-300 hover:text-primary hover:drop-shadow-[0_0_18px_hsl(var(--gradient-start)/0.8)]"
+        className="inline-block transition-all duration-300 hover:text-primary hover:drop-shadow-[0_0_20px_hsl(var(--gradient-start)/0.8)]"
         style={{ transformOrigin: "bottom", cursor: "default" }}
       >
         {char === " " ? "\u00A0" : char}
       </motion.span>
     ))}
   </span>
+);
+
+/* ── Lens flare component ── */
+const LensFlare = ({ x, y, size, delay }: { x: string; y: string; size: number; delay: number }) => (
+  <motion.div
+    className="absolute rounded-full pointer-events-none"
+    style={{
+      left: x,
+      top: y,
+      width: size,
+      height: size,
+      background: `radial-gradient(circle, hsl(var(--gradient-mid) / 0.4) 0%, hsl(var(--gradient-start) / 0.1) 40%, transparent 70%)`,
+    }}
+    animate={{
+      opacity: [0, 0.6, 0.2, 0.5, 0],
+      scale: [0.8, 1.2, 0.9, 1.1, 0.8],
+    }}
+    transition={{ duration: 8, repeat: Infinity, delay, ease: "easeInOut" }}
+  />
 );
 
 /* ════════════════════════════════════════════════
@@ -100,7 +139,6 @@ const HeroSection = () => {
   const smoothX = useSpring(mouseX, { stiffness: 40, damping: 20 });
   const smoothY = useSpring(mouseY, { stiffness: 40, damping: 20 });
 
-  /* parallax transforms for different layers */
   const layer1X = useTransform(smoothX, [0, 1], [30, -30]);
   const layer1Y = useTransform(smoothY, [0, 1], [20, -20]);
   const layer2X = useTransform(smoothX, [0, 1], [-20, 20]);
@@ -118,7 +156,6 @@ const HeroSection = () => {
     [mouseX, mouseY],
   );
 
-  /* scroll-based parallax for the whole section */
   const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY);
@@ -126,12 +163,25 @@ const HeroSection = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* stable random particles */
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 30 }, (_, i) => ({
+        w: 2 + Math.random() * 3,
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        grad: ["start", "mid", "end"][i % 3],
+        dur: 3 + Math.random() * 4,
+        delay: Math.random() * 6,
+      })),
+    [],
+  );
+
   return (
     <section
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ background: "hsl(var(--background))" }}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background"
     >
       {/* ── VIDEO BACKGROUND ── */}
       <div className="absolute inset-0 z-0">
@@ -140,16 +190,14 @@ const HeroSection = () => {
           muted
           loop
           playsInline
-          className="w-full h-full object-cover opacity-[0.12]"
-          poster=""
+          className="w-full h-full object-cover opacity-[0.10]"
         >
           <source
             src="https://cdn.pixabay.com/video/2024/02/12/200351-912082564_large.mp4"
             type="video/mp4"
           />
         </video>
-        {/* dark overlay for readability */}
-        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0 bg-background/70" />
       </div>
 
       {/* ── NEON ORB LAYER (parallax layer 1) ── */}
@@ -158,22 +206,38 @@ const HeroSection = () => {
         style={{ x: layer1X, y: layer1Y, translateY: scrollY * -0.15 }}
       >
         <div
-          className="absolute w-[550px] h-[550px] rounded-full blur-[140px] opacity-25"
-          style={{ background: "hsl(var(--gradient-start))", top: "5%", left: "5%" }}
+          className="absolute w-[600px] h-[600px] rounded-full blur-[160px] opacity-20"
+          style={{ background: "hsl(var(--gradient-start))", top: "0%", left: "0%" }}
         />
         <div
-          className="absolute w-[450px] h-[450px] rounded-full blur-[130px] opacity-20"
-          style={{ background: "hsl(var(--gradient-mid))", top: "45%", right: "0%" }}
+          className="absolute w-[500px] h-[500px] rounded-full blur-[140px] opacity-15"
+          style={{ background: "hsl(var(--gradient-mid))", top: "40%", right: "-5%" }}
         />
         <div
-          className="absolute w-[400px] h-[400px] rounded-full blur-[120px] opacity-15"
-          style={{ background: "hsl(var(--gradient-end))", bottom: "5%", left: "25%" }}
+          className="absolute w-[450px] h-[450px] rounded-full blur-[130px] opacity-15"
+          style={{ background: "hsl(var(--gradient-end))", bottom: "0%", left: "30%" }}
         />
+        {/* extra accent orb */}
+        <div
+          className="absolute w-[300px] h-[300px] rounded-full blur-[100px] opacity-10"
+          style={{ background: "hsl(var(--gradient-mid))", top: "20%", left: "50%" }}
+        />
+      </motion.div>
+
+      {/* ── LENS FLARES ── */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none z-[2]"
+        style={{ x: layer3X, y: layer3Y }}
+      >
+        <LensFlare x="15%" y="20%" size={200} delay={0} />
+        <LensFlare x="70%" y="15%" size={150} delay={2} />
+        <LensFlare x="80%" y="65%" size={180} delay={4} />
+        <LensFlare x="25%" y="70%" size={120} delay={6} />
       </motion.div>
 
       {/* ── FLOATING GEOMETRIC SHAPES (parallax layer 2) ── */}
       <motion.div
-        className="absolute inset-0 pointer-events-none z-[2]"
+        className="absolute inset-0 pointer-events-none z-[3]"
         style={{ x: layer2X, y: layer2Y, translateY: scrollY * -0.08 }}
       >
         {shapes.map((s, i) => (
@@ -187,14 +251,14 @@ const HeroSection = () => {
             }}
             transition={{ duration: s.dur, repeat: Infinity, delay: s.delay, ease: "easeInOut" }}
           >
-            <ShapeSVG type={s.type} size={s.size} color={s.color} />
+            <ShapeSVG type={s.type} size={s.size} gradient={s.gradient} />
           </motion.div>
         ))}
       </motion.div>
 
       {/* ── LIGHT STREAKS (parallax layer 3) ── */}
       <motion.div
-        className="absolute inset-0 pointer-events-none z-[3]"
+        className="absolute inset-0 pointer-events-none z-[4]"
         style={{ x: layer3X, y: layer3Y }}
       >
         {streaks.map((s, i) => (
@@ -208,39 +272,34 @@ const HeroSection = () => {
               rotate: `${s.angle}deg`,
               background: `linear-gradient(90deg, transparent, hsl(var(--gradient-start) / 0.5), hsl(var(--gradient-mid) / 0.3), transparent)`,
             }}
-            animate={{ x: [0, 800], opacity: [0, 0.7, 0] }}
+            animate={{ x: [0, 900], opacity: [0, 0.7, 0] }}
             transition={{ duration: s.dur, repeat: Infinity, delay: s.delay, ease: "easeInOut" }}
           />
         ))}
       </motion.div>
 
       {/* ── PARTICLE DOTS ── */}
-      <div className="absolute inset-0 pointer-events-none z-[4]">
-        {[...Array(25)].map((_, i) => (
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        {particles.map((p, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full"
             style={{
-              width: 2 + Math.random() * 3,
-              height: 2 + Math.random() * 3,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              background: `hsl(var(--gradient-${["start", "mid", "end"][i % 3]}) / 0.6)`,
+              width: p.w,
+              height: p.w,
+              top: p.top,
+              left: p.left,
+              background: `hsl(var(--gradient-${p.grad}) / 0.6)`,
             }}
-            animate={{ opacity: [0, 1, 0], y: [0, -40, -80], scale: [0, 1.2, 0] }}
-            transition={{
-              duration: 3 + Math.random() * 3,
-              repeat: Infinity,
-              delay: Math.random() * 6,
-              ease: "easeOut",
-            }}
+            animate={{ opacity: [0, 1, 0], y: [0, -50, -100], scale: [0, 1.2, 0] }}
+            transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: "easeOut" }}
           />
         ))}
       </div>
 
       {/* ── GRID OVERLAY ── */}
       <div
-        className="absolute inset-0 z-[5] opacity-[0.025]"
+        className="absolute inset-0 z-[6] opacity-[0.02]"
         style={{
           backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
           backgroundSize: "80px 80px",
@@ -248,7 +307,10 @@ const HeroSection = () => {
       />
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <div className="relative z-10 text-center px-4 max-w-6xl mx-auto" style={{ transform: `translateY(${scrollY * -0.3}px)` }}>
+      <div
+        className="relative z-10 text-center px-4 max-w-6xl mx-auto"
+        style={{ transform: `translateY(${scrollY * -0.3}px)` }}
+      >
         {/* badge */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7, filter: "blur(12px)" }}
@@ -287,27 +349,28 @@ const HeroSection = () => {
           transition={{ duration: 0.8, delay: 1.9 }}
           className="flex flex-col sm:flex-row gap-5 justify-center items-center"
         >
-          {/* primary CTA — pulsing glow */}
+          {/* primary CTA */}
           <motion.a
             href="#work"
             className="group relative px-10 py-4 rounded-full font-display font-semibold text-primary-foreground overflow-hidden"
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.96 }}
           >
-            {/* pulsing glow ring behind */}
             <motion.span
               className="absolute inset-0 rounded-full gradient-bg opacity-100"
-              animate={{ boxShadow: [
-                "0 0 20px hsl(var(--gradient-start) / 0.3), 0 0 60px hsl(var(--gradient-mid) / 0.15)",
-                "0 0 35px hsl(var(--gradient-start) / 0.5), 0 0 80px hsl(var(--gradient-mid) / 0.25)",
-                "0 0 20px hsl(var(--gradient-start) / 0.3), 0 0 60px hsl(var(--gradient-mid) / 0.15)",
-              ]}}
+              animate={{
+                boxShadow: [
+                  "0 0 20px hsl(var(--gradient-start) / 0.3), 0 0 60px hsl(var(--gradient-end) / 0.15)",
+                  "0 0 40px hsl(var(--gradient-start) / 0.5), 0 0 90px hsl(var(--gradient-end) / 0.25)",
+                  "0 0 20px hsl(var(--gradient-start) / 0.3), 0 0 60px hsl(var(--gradient-end) / 0.15)",
+                ],
+              }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
             />
             <span className="relative z-10 flex items-center gap-2">
               Explore My Work
               <motion.span
-                animate={{ x: [0, 4, 0] }}
+                animate={{ x: [0, 5, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               >
                 →
@@ -334,7 +397,9 @@ const HeroSection = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 2.5 }}
       >
-        <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-body">Scroll</span>
+        <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-body">
+          Scroll
+        </span>
         <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
           <ArrowDown className="w-4 h-4 text-muted-foreground" />
         </motion.div>
