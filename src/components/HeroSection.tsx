@@ -248,7 +248,7 @@ const HeroSection = () => {
       />
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <div className="relative z-10 text-center px-4 max-w-6xl mx-auto" style={{ translateY: scrollY * -0.3 }}>
+      <div className="relative z-10 text-center px-4 max-w-6xl mx-auto" style={{ transform: `translateY(${scrollY * -0.3}px)` }}>
         {/* badge */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7, filter: "blur(12px)" }}
